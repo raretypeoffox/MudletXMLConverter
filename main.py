@@ -3,8 +3,8 @@ import json
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
-# FILE = 'sample.xml'
-FILE = 'artemis.xml'
+FILE = 'sample.xml'
+# FILE = 'artemis.xml'
 
 
 
@@ -78,8 +78,14 @@ def reconstruct():
         f.write(pretty_xml)
     
 
+def add_to_order(text, depth):
+    for i in range(depth):
+        text = ' ' + text
+    Order.append(text)
+    
 
-def build_filestructure(element_dict, parent_dir='', package_dir=''):
+
+def build_filestructure(element_dict, parent_dir='', package_dir='', depth=0):
     # If the element is a HostPackage, create a .json file for it
     if element_dict['tag'] == 'HostPackage':
         os.makedirs('MudletPackage', exist_ok=True)
@@ -94,7 +100,7 @@ def build_filestructure(element_dict, parent_dir='', package_dir=''):
     # Set the element's text content
     if element_dict['text']:
         element.text = element_dict['text']
-
+        
     # If the element is a TriggerGroup (or AliasGroup, ScriptGroup, KeyGroup),
     # and it has a name, create a new directory for it
     group_types = ['TriggerGroup', 'TimerGroup', 'AliasGroup', 'ScriptGroup', 'KeyGroup']
@@ -104,10 +110,11 @@ def build_filestructure(element_dict, parent_dir='', package_dir=''):
                 # Determine the correct package directory based on the group type
                 package_dir = element_dict['tag'].replace('Group', 'Package')
                 # Replace forward slashes in the directory name
-                dir_name = child['text'].replace('/', '_S_').replace('*', '_A_').replace('?', '_Q_').replace('<', '_LT_').replace('>', '_GT_').replace('|', '_P_').replace('"', '_DQ_').rstrip('.')
+                dir_name = f"{child['text'].replace('/', '_S_').replace('*', '_A_').replace('?', '_Q_').replace('<', '_LT_').replace('>', '_GT_').replace('|', '_P_').replace('"', '_DQ_').rstrip('.')}"
                 # Create the new directory
                 new_dir = os.path.join('MudletPackage', package_dir, parent_dir, dir_name)
                 os.makedirs(new_dir, exist_ok=True)
+                add_to_order(child['text'], depth)
                 # Update the parent directory for the next level of recursion
                 parent_dir = os.path.join(parent_dir, dir_name)
                 break
@@ -118,7 +125,7 @@ def build_filestructure(element_dict, parent_dir='', package_dir=''):
         for child in element_dict['children']:
             if child['tag'] == 'name':
                 # Replace forward slashes in the filename
-                filename = child['text'].replace('/', '_S_').replace('*', '_A_').replace('?', '_Q_').replace('<', '_LT_').replace('>', '_GT_').replace('|', '_P_').replace('"', '_DQ_').rstrip('.')
+                filename = f"{child['text'].replace('/', '_S_').replace('*', '_A_').replace('?', '_Q_').replace('<', '_LT_').replace('>', '_GT_').replace('|', '_P_').replace('"', '_DQ_').rstrip('.')}"
                 # Create the .lua file
                 file_path = os.path.join('MudletPackage', package_dir, parent_dir, filename + '.lua')
                 with open(file_path, 'w', encoding='utf-8') as file:
@@ -133,12 +140,19 @@ def build_filestructure(element_dict, parent_dir='', package_dir=''):
                 with open(json_path, 'w', encoding='utf-8') as file:
                     # Write the other tags to the JSON file
                     json.dump({k: v for k, v in element_dict.items() if k != 'children'}, file)
+                add_to_order(child['text'], depth)
 
     # Recursively reconstruct each child element and add it to the current element
     for child_dict in element_dict['children']:
-        child_element = build_filestructure(child_dict, parent_dir, package_dir)
+        child_element = build_filestructure(child_dict, parent_dir, package_dir, depth + 1)
         element.append(child_element)
 
     return element
 
+Order = []
+
 build_filestructure(root_dict, '')
+
+with open('order.txt', 'w') as f:
+    for item in Order:
+        f.write("%s\n" % item)
