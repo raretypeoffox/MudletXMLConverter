@@ -1,0 +1,16 @@
+MUDLET XML Converter
+
+A Mudlet script to help Mudlet package developers.
+
+Intention of the script is to unpack Mudlet packages into their .lua and .json components to allow
+developers to edit their packages in their preferred development editor of choice (eg VS Code).
+
+Currently functional:
+- Unpacking a Mudlet .xml package into its component parts
+
+Future Implementation
+- Repack the .lua and .json files into a single Mudlet .xml file
+
+Current Usage:
+
+python main.py
