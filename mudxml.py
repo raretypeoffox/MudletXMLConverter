@@ -1,13 +1,8 @@
 import os
 import json
+import sys
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
-
-# FILE = 'sample.xml'
-FILE = 'artemis.xml'
-
-tree = ET.parse(FILE)
-root = tree.getroot()
 
 def iterate_children(element, depth=0):
     # Create a dictionary to hold the element's information
@@ -25,13 +20,6 @@ def iterate_children(element, depth=0):
         element_dict['children'].append(child_dict)
 
     return element_dict
-
-# Start iterating from the root
-root_dict = iterate_children(root)
-
-# Write the dictionary to a file in JSON format
-with open('log.json', 'w') as f:
-    json.dump(root_dict, f, indent=4)
   
 def reconstruct_element(element_dict):
     # Create a new element with the tag and attributes from the dictionary
@@ -286,10 +274,65 @@ def build_filestructure(element_dict, parent_dir='', package_dir='', depth=0):
 
     return element
 
+def check_xml_header(filename):
+    try:
+        tree = ET.parse(filename)
+        root = tree.getroot()
+
+        # Check the root tag
+        if root.tag != 'MudletPackage':
+            print(f"Unexpected root tag: {root.tag}, expecting MudletPackage")
+            return False
+
+        # Check the first child tag
+        if len(root) > 0 and root[0].tag != 'HostPackage':
+            print(f"Unexpected first child tag: {root[0].tag}, expecting HostPackage")
+            return False
+
+        return True
+
+    except ET.ParseError:
+        print(f"Failed to parse {filename}")
+        return False
+
 Order = []
+        
+def main(filename):
 
-build_filestructure(root_dict, '')
+    tree = ET.parse(filename)
+    root = tree.getroot()
+    
+    # Start iterating from the root
+    root_dict = iterate_children(root)
 
-with open('order.txt', 'w') as f:
-    for item in Order:
-        f.write("%s\n" % item)
+    # Write the dictionary to a file in JSON format
+    with open('log.json', 'w') as f:
+        json.dump(root_dict, f, indent=4)
+        
+    # check if this is a Mudlet package
+    print("Processing Mudlet Package...")
+    
+    if not check_xml_header(filename):
+        sys.exit()
+    
+    build_filestructure(root_dict, '')
+
+    with open('order.txt', 'w') as f:
+        for item in Order:
+            f.write("%s\n" % item)
+            
+    print("Mudlet Package processed successfully! See folder MudletPackage")
+    sys.exit()
+
+if __name__ == "__main__":
+    # Check if a filename was provided as a command-line argument
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+        # Check if the file exists
+        if not os.path.exists(filename):
+            print(f"File {filename} does not exist.")
+            sys.exit()
+        main(filename)
+    else:
+        print("Usage: python mudxml.py <filename>")
+        print("where <filename> is the name of the Mudlet XML package file to be processed.")
