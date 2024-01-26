@@ -287,6 +287,7 @@ def check_xml_header(filename):
         # Check the first child tag
         if len(root) > 0 and root[0].tag != 'HostPackage':
             print(f"Unexpected first child tag: {root[0].tag}, expecting HostPackage")
+            print(f"Is this just a script export? For now, only full package exports are supported.")
             return False
 
         return True
@@ -298,6 +299,11 @@ def check_xml_header(filename):
 Order = []
         
 def main(filename):
+    # check if this is a Mudlet package
+    print("Processing Mudlet Package...")
+    
+    if not check_xml_header(filename):
+        sys.exit()
 
     tree = ET.parse(filename)
     root = tree.getroot()
@@ -309,11 +315,7 @@ def main(filename):
     with open('log.json', 'w') as f:
         json.dump(root_dict, f, indent=4)
         
-    # check if this is a Mudlet package
-    print("Processing Mudlet Package...")
-    
-    if not check_xml_header(filename):
-        sys.exit()
+
     
     build_filestructure(root_dict, '')
 
