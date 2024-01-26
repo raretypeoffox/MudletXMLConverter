@@ -3,8 +3,8 @@ import json
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
-FILE = 'sample.xml'
-# FILE = 'artemis.xml'
+# FILE = 'sample.xml'
+FILE = 'artemis.xml'
 
 tree = ET.parse(FILE)
 root = tree.getroot()
@@ -92,6 +92,12 @@ def write_lua(child, element_dict, parent_dir='', package_dir='', depth=0, filen
             if script_child['tag'] == 'script' and script_child['text'] is not None:
                 file.write(script_child['text'])
                 break
+            
+def write_script_code(file, element_dict):
+    for script_child in element_dict['children']:
+        if script_child['tag'] == 'script' and script_child['text'] is not None:
+            file.write(script_child['text'])
+            break
 
 def write_json(child, element_dict, parent_dir='', package_dir='', depth=0, filename=''):
     # Create the .json file
@@ -120,19 +126,89 @@ def write_json(child, element_dict, parent_dir='', package_dir='', depth=0, file
     add_to_order(child['text'], depth)
 
 def process_trigger(child, element_dict, parent_dir, package_dir, depth, filename):
-    write_lua(child, element_dict, parent_dir, package_dir, depth, filename)
     write_json(child, element_dict, parent_dir, package_dir, depth, filename)
+    file_path = os.path.join('MudletPackage', package_dir, parent_dir, filename + '.lua')
+    with open(file_path, 'w', encoding='utf-8') as file:
+        # Write the contents of the <script> element to the file
+        file.write(f"-- Trigger: {child['text']} \n")
+        
+        pattern_types = ["substring", "regex", "start of line", "exact", "lua function", "line spacer", "colour trigger", "prompt"]
+        isColorizerTrigger = False
+        
+        # TODO: probably some more processing here
+        for attribute in element_dict['attributes']:
+            if element_dict['attributes'][attribute] == 'yes':
+                if attribute == 'isColorizerTrigger':
+                    isColorizerTrigger = True
+                file.write(f"-- Attribute: {attribute}\n")
+        file.write("\n") 
+        for script_child in element_dict['children']:
+            
+            
+            if isColorizerTrigger:
+                if script_child["tag"] == "mFgColor" and script_child['text'] is not None:
+                    file.write(f"-- mFgColor: {script_child['text']}\n")
+                if script_child["tag"] == "mBgColor" and script_child['text'] is not None:
+                    file.write(f"-- mBgColour: {script_child['text']}\n")
+
+            if script_child["tag"] == "regexCodeList" and script_child['children'] is not None:
+                index = 0
+                pattern_list = []
+                pattern_types_list = []
+                file.write(f"\n-- Trigger Patterns:\n")
+                for triggerPattern in script_child['children']:
+                    if triggerPattern['tag'] == 'string' and triggerPattern['text'] is not None:
+                        pattern_list.append(triggerPattern['text'])
+                        
+            if script_child["tag"] == "regexCodePropertyList" and script_child['children'] is not None:  
+                for triggerPatternType in script_child['children']:
+                    if triggerPatternType['tag'] == 'integer' and triggerPatternType['text'] is not None:
+                        pattern_types_list.append(pattern_types[int(triggerPatternType['text'])])
+
+                for pattern in pattern_list:
+                    file.write(f"-- {index} ({pattern_types_list[index]}): {pattern}\n")
+                    index += 1
+
+        file.write("\n")
+        write_script_code(file, element_dict)
+
+    
 
 def process_timer(child, element_dict, parent_dir, package_dir, depth, filename):
-    write_lua(child, element_dict, parent_dir, package_dir, depth, filename)
     write_json(child, element_dict, parent_dir, package_dir, depth, filename)
+    file_path = os.path.join('MudletPackage', package_dir, parent_dir, filename + '.lua')
+    with open(file_path, 'w', encoding='utf-8') as file:
+        # Write the contents of the <script> element to the file
+        file.write(f"-- Timer: {child['text']}\n")
+        
+        for attribute in element_dict['attributes']:
+            if element_dict['attributes'][attribute] == 'yes':
+                file.write(f"-- Attribute: {attribute}\n")
+                
+        file.write("\n") 
+        
+        for script_child in element_dict['children']:
+            if script_child["tag"] == "command" and script_child['text'] is not None:
+                file.write(f"-- Command: {script_child['text']}\n")
+            elif script_child["tag"] == "time" and script_child['text'] is not None:
+                file.write(f"-- Time: {script_child['text']}\n")
+                     
+        file.write("\n")
+        write_script_code(file, element_dict)
+    
 
 def process_alias(child, element_dict, parent_dir, package_dir, depth, filename):
     write_json(child, element_dict, parent_dir, package_dir, depth, filename)
     file_path = os.path.join('MudletPackage', package_dir, parent_dir, filename + '.lua')
     with open(file_path, 'w', encoding='utf-8') as file:
         # Write the contents of the <script> element to the file
-        file.write(f"-- {filename} alias\n")
+        file.write(f"-- Alias: {child['text']}\n")
+        
+        for attribute in element_dict['attributes']:
+            if element_dict['attributes'][attribute] == 'yes':
+                file.write(f"-- Attribute: {attribute}\n")
+                
+        file.write("\n") 
         
         for script_child in element_dict['children']:
             if script_child["tag"] == "command" and script_child['text'] is not None:
@@ -142,12 +218,7 @@ def process_alias(child, element_dict, parent_dir, package_dir, depth, filename)
                 
         
         file.write("\n")
-        
-        for script_child in element_dict['children']:
-            if script_child['tag'] == 'script' and script_child['text'] is not None:
-                file.write(script_child['text'])
-                break
-    write_json(child, element_dict, parent_dir, package_dir, depth, filename)
+        write_script_code(file, element_dict)
     
 
 def process_script(child, element_dict, parent_dir, package_dir, depth, filename):
@@ -155,19 +226,21 @@ def process_script(child, element_dict, parent_dir, package_dir, depth, filename
     file_path = os.path.join('MudletPackage', package_dir, parent_dir, filename + '.lua')
     with open(file_path, 'w', encoding='utf-8') as file:
         # Write the contents of the <script> element to the file
+        file.write(f"-- Script: {child['text']}\n")
         
+        for attribute in element_dict['attributes']:
+            if element_dict['attributes'][attribute] == 'yes':
+                file.write(f"-- Attribute: {attribute}\n")
+                
         for script_child in element_dict['children']:
             if script_child['tag'] == 'eventHandlerList' and script_child['children'] is not None:
-                file.write(f"-- {filename}() called on the following events:\n")
+                file.write(f"-- {child['text']}() called on the following events:\n")
                 for eventHandler in script_child['children']:
                     if eventHandler['tag'] == 'string' and eventHandler['text'] is not None:
                         file.write(f"-- {eventHandler['text']}\n")
                 file.write("\n")
         
-        for script_child in element_dict['children']:
-            if script_child['tag'] == 'script' and script_child['text'] is not None:
-                file.write(script_child['text'])
-                break
+        write_script_code(file, element_dict)
     
 
 def process_key(child, element_dict, parent_dir, package_dir, depth, filename):
