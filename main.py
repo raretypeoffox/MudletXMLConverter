@@ -81,19 +81,9 @@ def add_to_order(text, depth):
         text = ' ' + text
     Order.append(text)
     
-    
-def write_lua(child, element_dict, parent_dir='', package_dir='', depth=0, filename=''):            
-
-    # Create the .lua file
-    file_path = os.path.join('MudletPackage', package_dir, parent_dir, filename + '.lua')
-    with open(file_path, 'w', encoding='utf-8') as file:
-        # Write the contents of the <script> element to the file
-        for script_child in element_dict['children']:
-            if script_child['tag'] == 'script' and script_child['text'] is not None:
-                file.write(script_child['text'])
-                break
-            
+         
 def write_script_code(file, element_dict):
+    file.write("-- Script Code:\n")
     for script_child in element_dict['children']:
         if script_child['tag'] == 'script' and script_child['text'] is not None:
             file.write(script_child['text'])
@@ -126,7 +116,6 @@ def write_json(child, element_dict, parent_dir='', package_dir='', depth=0, file
     add_to_order(child['text'], depth)
 
 def process_trigger(child, element_dict, parent_dir, package_dir, depth, filename):
-    write_json(child, element_dict, parent_dir, package_dir, depth, filename)
     file_path = os.path.join('MudletPackage', package_dir, parent_dir, filename + '.lua')
     with open(file_path, 'w', encoding='utf-8') as file:
         # Write the contents of the <script> element to the file
@@ -175,7 +164,6 @@ def process_trigger(child, element_dict, parent_dir, package_dir, depth, filenam
     
 
 def process_timer(child, element_dict, parent_dir, package_dir, depth, filename):
-    write_json(child, element_dict, parent_dir, package_dir, depth, filename)
     file_path = os.path.join('MudletPackage', package_dir, parent_dir, filename + '.lua')
     with open(file_path, 'w', encoding='utf-8') as file:
         # Write the contents of the <script> element to the file
@@ -198,7 +186,6 @@ def process_timer(child, element_dict, parent_dir, package_dir, depth, filename)
     
 
 def process_alias(child, element_dict, parent_dir, package_dir, depth, filename):
-    write_json(child, element_dict, parent_dir, package_dir, depth, filename)
     file_path = os.path.join('MudletPackage', package_dir, parent_dir, filename + '.lua')
     with open(file_path, 'w', encoding='utf-8') as file:
         # Write the contents of the <script> element to the file
@@ -222,7 +209,6 @@ def process_alias(child, element_dict, parent_dir, package_dir, depth, filename)
     
 
 def process_script(child, element_dict, parent_dir, package_dir, depth, filename):
-    write_json(child, element_dict, parent_dir, package_dir, depth, filename)
     file_path = os.path.join('MudletPackage', package_dir, parent_dir, filename + '.lua')
     with open(file_path, 'w', encoding='utf-8') as file:
         # Write the contents of the <script> element to the file
@@ -238,14 +224,31 @@ def process_script(child, element_dict, parent_dir, package_dir, depth, filename
                 for eventHandler in script_child['children']:
                     if eventHandler['tag'] == 'string' and eventHandler['text'] is not None:
                         file.write(f"-- {eventHandler['text']}\n")
-                file.write("\n")
         
+        file.write("\n")  
         write_script_code(file, element_dict)
     
 
 def process_key(child, element_dict, parent_dir, package_dir, depth, filename):
-    write_lua(child, element_dict, parent_dir, package_dir, depth, filename)
-    write_json(child, element_dict, parent_dir, package_dir, depth, filename)
+    file_path = os.path.join('MudletPackage', package_dir, parent_dir, filename + '.lua')
+    with open(file_path, 'w', encoding='utf-8') as file:
+        # Write the contents of the <script> element to the file
+        file.write(f"-- Key: {child['text']}\n")
+        
+        for attribute in element_dict['attributes']:
+            if element_dict['attributes'][attribute] == 'yes':
+                file.write(f"-- Attribute: {attribute}\n")
+        
+        for script_child in element_dict['children']:
+            if script_child["tag"] == "command" and script_child['text'] is not None:
+                file.write(f"-- Command: {script_child['text']}\n")
+            elif script_child["tag"] == "keyCode" and script_child['text'] is not None:
+                file.write(f"-- keyCode: {script_child['text']}\n")
+            elif script_child["tag"] == "keyModifier" and script_child['text'] is not None:
+                file.write(f"-- keyModifier: {script_child['text']}\n")     
+        
+        file.write("\n")
+        write_script_code(file, element_dict)
     
 
 
@@ -290,7 +293,7 @@ def build_filestructure(element_dict, parent_dir='', package_dir='', depth=0):
             if child['tag'] == 'name':
                 # Replace forward slashes in the filename
                 filename = f"{child['text'].replace('/', '_S_').replace('*', '_A_').replace('?', '_Q_').replace('<', '_LT_').replace('>', '_GT_').replace('|', '_P_').replace('"', '_DQ_').rstrip('.')}"
-
+                write_json(child, element_dict, parent_dir, package_dir, depth, filename)
                 if element_dict['tag'] == 'Trigger':
                     process_trigger(child, element_dict, parent_dir, package_dir, depth, filename)
                 elif element_dict['tag'] == 'Timer':
