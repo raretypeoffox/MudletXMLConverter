@@ -3,6 +3,7 @@
 *.log
 *.json
 log.txt
+order.txt
 MudletPackage/
 
 __pycache__/

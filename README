@@ -7,10 +7,12 @@ developers to edit their packages in their preferred development editor of choic
 
 Currently functional:
 - Unpacking a Mudlet .xml package into its component parts
+- NOTE: you'll have to take the .xml file from the current folder of your package (not exporting it)
+- Often found in C:\users\USERNAME\.config\mudlet\profiles\PROFILENAME\current
 
 Future Implementation
 - Repack the .lua and .json files into a single Mudlet .xml file
 
 Current Usage:
 
-python main.py
+python mudxml.py
